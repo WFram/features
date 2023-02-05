@@ -13,6 +13,7 @@
 //          when an instance is created it should pass a type of the feature extractor
 //          to extract the features it also should have an ability to specify if we need grayscale or color image
 
+// TODO: make as a gtest
 int main() {
   // TODO: from test folder
   std::string image_path = "/home/wfram/wf_feature_extractor/test/00000.jpg";
@@ -24,7 +25,8 @@ int main() {
   orb_feature_extractor::Keypoints keypoints;
   feature_extractor.extract(image, keypoints);
 
-  cv::drawKeypoints(image, keypoints, debug_image);
+  cv::drawKeypoints(image, keypoints, debug_image, cv::Scalar(0, 255, 0));
+  cv::imshow("debug_image", debug_image);
   cv::waitKey(0);
 
   return 0;
