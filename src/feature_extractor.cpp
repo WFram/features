@@ -63,7 +63,7 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
   }
 }
 
-void ORBFeatureExtractor::computePyramid(const cv::Mat &image) const {
+void ORBFeatureExtractor::computePyramid(const cv::Mat &image) {
   for (size_t level = 0; level < number_of_levels_; ++level) {
     Precision scale = inv_scale_factor_per_level_[level];
     // TODO: rename
@@ -72,7 +72,7 @@ void ORBFeatureExtractor::computePyramid(const cv::Mat &image) const {
     cv::Size whole_size(size.width + edge_threshold_ * 2, size.height + edge_threshold_ * 2);
     cv::Mat temporal_image(whole_size, image.type());
     // TODO: check if we do everything in the right order
-    temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height)).copyTo(image_pyramid_[level]);
+    image_pyramid_[level] = temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height));
 
     // Compute the resized image
     if (level != 0) {
@@ -389,7 +389,7 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     computeOrientation(image_pyramid_[level], all_keypoints[level], umax_);
 }
 
-void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) const {
+void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) {
   if (image.empty()) {
     std::cerr << "ERROR: empty image!" << std::endl;
     return;

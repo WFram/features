@@ -15,7 +15,7 @@
 
 int main() {
   // TODO: from test folder
-  std::string image_path = "test/00000.jpg";
+  std::string image_path = "/home/wfram/wf_feature_extractor/test/00000.jpg";
   cv::Mat image = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
   cv::Mat debug_image;
 

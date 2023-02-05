@@ -23,7 +23,7 @@ class ORBFeatureExtractor {
   explicit ORBFeatureExtractor(const int number_of_features, const size_t number_of_levels,
                                const Precision scale_factor);
 
-  void computePyramid(const cv::Mat &image) const;
+  void computePyramid(const cv::Mat &image);
 
   void distributeOctTree(const Keypoints &distributed_keypoints, Keypoints &result_keypoints, const int &min_x,
                          const int &max_x, const int &min_y, const int &max_y, const size_t &N) const;
@@ -53,7 +53,7 @@ class ORBFeatureExtractor {
     bool no_more_;
   };
 
-  void extract(const cv::Mat &image, Keypoints &keypoints) const;
+  void extract(const cv::Mat &image, Keypoints &keypoints);
 
  private:
   const int number_of_features_;
