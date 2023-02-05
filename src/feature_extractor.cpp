@@ -121,14 +121,10 @@ void ORBFeatureExtractor::ExtractorNode::divideNode(ExtractorNode &n1, Extractor
       n4.keypoints_.push_back(kp);
   }
 
-  std::function check_no_more = [&](ExtractorNode &n) {
-    if (n.keypoints_.size() == 1) n.no_more_ = true;
-  };
-
-  check_no_more(n1);
-  check_no_more(n2);
-  check_no_more(n3);
-  check_no_more(n4);
+  if (n1.keypoints_.size() == 1) n1.no_more_ = true;
+  if (n2.keypoints_.size() == 1) n2.no_more_ = true;
+  if (n3.keypoints_.size() == 1) n3.no_more_ = true;
+  if (n4.keypoints_.size() == 1) n4.no_more_ = true;
 }
 
 bool ORBFeatureExtractor::ExtractorNode::compareNodes(std::pair<int, ExtractorNode *> &e1,
