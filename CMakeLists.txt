@@ -49,5 +49,8 @@ message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(feature_extractor PUBLIC opencv)
 
-add_executable(wf_feature_extractor main.cpp)
-target_link_libraries(wf_feature_extractor feature_extractor)
+set(TEST_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test_data/")
+
+enable_testing()
+include(cmake/addTest.cmake)
+add_subdirectory(test)
