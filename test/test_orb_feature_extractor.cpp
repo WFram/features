@@ -2,22 +2,10 @@
 #include <vector>
 
 #include <opencv4/opencv2/core.hpp>
-#include <opencv4/opencv2/imgproc.hpp>
 
 #include <gtest/gtest.h>
 
 #include "feature_extractor.h"
-
-/* TODO: create an abstract class which performs feature extraction
-          it should provide at least two inherited feature extractors: SIFT and ORB
-          ORB extractor should be written from the scratch
-          for SIFT the standard OpenCV implementation can be used (for now)
-          when an instance is created it should pass a type of the feature extractor
-          to extract the features it also should have an ability to specify if we need grayscale or color image
-
- TODO: make as a gtest
-       1) set a test dir and take an image from there
-       2) take parameters for the extractor by using YAM*/
 
 namespace orb_feature_extractor {
 

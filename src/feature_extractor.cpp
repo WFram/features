@@ -7,7 +7,7 @@
 namespace orb_feature_extractor {
 ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const size_t number_of_levels,
                                          const Precision scale_factor)
-    : number_of_features_(number_of_features), number_of_levels_(number_of_levels), scale_factor_(scale_factor) {
+    : number_of_features_(number_of_features), number_of_levels_(number_of_levels) {
   scale_factor_per_level_.resize(number_of_levels_);
   squared_scale_factor_per_level_.resize(number_of_levels_);
   scale_factor_per_level_[0] = 1.0;
@@ -71,7 +71,6 @@ void ORBFeatureExtractor::computePyramid(const cv::Mat &image) {
                   cvRound(static_cast<Precision>(image.rows) * scale));
     cv::Size whole_size(size.width + edge_threshold_ * 2, size.height + edge_threshold_ * 2);
     cv::Mat temporal_image(whole_size, image.type());
-    // TODO: check if we do everything in the right order
     image_pyramid_[level] = temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height));
 
     // Compute the resized image
@@ -142,7 +141,6 @@ bool ORBFeatureExtractor::ExtractorNode::compareNodes(std::pair<int, ExtractorNo
   }
 }
 
-// TODO: make it return by a reference as a parameter value
 void ORBFeatureExtractor::distributeOctTree(const Keypoints &distributed_keypoints, Keypoints &result_keypoints,
                                             const int &min_x, const int &max_x, const int &min_y, const int &max_y,
                                             const size_t &N) const {
@@ -185,11 +183,9 @@ void ORBFeatureExtractor::distributeOctTree(const Keypoints &distributed_keypoin
   bool finish{false};
   int iteration{0};
 
-  // TODO: solve a shadowing issue
   std::vector<std::pair<int, ExtractorNode *> > size_node_pairs;
   size_node_pairs.reserve(nodes.size() * 4);
 
-  // TODO: check if emplacing back is okay
   std::function add_children = [&](ExtractorNode &n, std::list<ExtractorNode> &tree_nodes,
                                    std::vector<std::pair<int, ExtractorNode *> > &pairs, int &to_expand) {
     if (!n.keypoints_.empty()) {
@@ -216,7 +212,7 @@ void ORBFeatureExtractor::distributeOctTree(const Keypoints &distributed_keypoin
         continue;
       } else {
         // If more than one point, subdivide
-        // TODO: maybe change them to pointers?
+        // TODO: change them to pointers
         ExtractorNode n1, n2, n3, n4;
         it->divideNode(n1, n2, n3, n4);
 
@@ -244,8 +240,7 @@ void ORBFeatureExtractor::distributeOctTree(const Keypoints &distributed_keypoin
         size_node_pairs.clear();
 
         std::sort(previous_size_node_pairs.begin(), previous_size_node_pairs.end(), ExtractorNode::compareNodes);
-        // TODO: be careful, it can be 0 here
-        // TODO: check an ex. https://en.cppreference.com/w/cpp/types/size_t
+        // TODO: check it it's not 0 here
         for (size_t j = previous_size_node_pairs.size() - 1; j--;) {
           ExtractorNode n1, n2, n3, n4;
           previous_size_node_pairs[j].second->divideNode(n1, n2, n3, n4);
@@ -370,7 +365,6 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     auto &keypoints = all_keypoints[level];
     keypoints.reserve(static_cast<size_t>(number_of_features_));
 
-    // TODO: implement this
     distributeOctTree(distributed_keypoints, keypoints, min_border_x, max_border_x, min_border_y, max_border_y,
                       static_cast<size_t>(features_per_level_[level]));
 

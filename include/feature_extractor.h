@@ -9,14 +9,10 @@
 
 #include <opencv4/opencv2/opencv.hpp>
 
-// TODO: solve the problem with getting access to cv Mat
-
 namespace orb_feature_extractor {
 
 using Precision = double;
 using Keypoints = std::vector<cv::KeyPoint>;
-
-class ExtractorNode;
 
 class ORBFeatureExtractor {
  public:
@@ -58,7 +54,6 @@ class ORBFeatureExtractor {
  private:
   const int number_of_features_;
   const size_t number_of_levels_;
-  const Precision scale_factor_;
 
   std::vector<Precision> scale_factor_per_level_;
   std::vector<Precision> inv_scale_factor_per_level_;
