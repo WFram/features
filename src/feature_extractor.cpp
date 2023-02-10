@@ -5,42 +5,42 @@
 #include "feature_extractor.h"
 
 namespace orb_feature_extractor {
-ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const size_t number_of_levels,
+ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const size_t number_of_pyramid_levels,
                                          const Precision scale_factor)
-    : number_of_features_(number_of_features), number_of_levels_(number_of_levels) {
-  scale_factor_per_level_.resize(number_of_levels_);
-  squared_scale_factor_per_level_.resize(number_of_levels_);
+    : number_of_features_(number_of_features), number_of_pyramid_levels_(number_of_pyramid_levels) {
+  scale_factor_per_level_.resize(number_of_pyramid_levels_);
+  squared_scale_factor_per_level_.resize(number_of_pyramid_levels_);
   scale_factor_per_level_[0] = 1.0;
   squared_scale_factor_per_level_[0] = 1.0;
 
-  for (size_t i = 1; i < number_of_levels_; i++) {
+  for (size_t i = 1; i < number_of_pyramid_levels_; i++) {
     scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor;
     squared_scale_factor_per_level_[i] = scale_factor_per_level_[i] * scale_factor_per_level_[i];
   }
 
-  inv_scale_factor_per_level_.resize(number_of_levels_);
-  squared_inv_scale_factor_per_level_.resize(number_of_levels_);
+  inv_scale_factor_per_level_.resize(number_of_pyramid_levels_);
+  squared_inv_scale_factor_per_level_.resize(number_of_pyramid_levels_);
 
-  for (size_t i = 0; i < number_of_levels_; i++) {
+  for (size_t i = 0; i < number_of_pyramid_levels_; i++) {
     inv_scale_factor_per_level_[i] = 1.0 / scale_factor_per_level_[i];
     squared_inv_scale_factor_per_level_[i] = 1.0 / squared_scale_factor_per_level_[i];
   }
 
-  image_pyramid_.resize(number_of_levels_);
-  features_per_level_.resize(number_of_levels_);
+  image_pyramid_.resize(number_of_pyramid_levels_);
+  features_per_level_.resize(number_of_pyramid_levels_);
 
   Precision factor = 1.0 / scale_factor;
   Precision desired_features_per_scale =
       number_of_features_ * (1 - factor) /
-      (1 - static_cast<Precision>(std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_levels_))));
+      (1 - static_cast<Precision>(std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
 
   int sum_of_features{0};
-  for (size_t level = 0; level < number_of_levels_ - 1; level++) {
+  for (size_t level = 0; level < number_of_pyramid_levels_ - 1; level++) {
     features_per_level_[level] = cvRound(desired_features_per_scale);
     sum_of_features += features_per_level_[level];
     desired_features_per_scale *= factor;
   }
-  features_per_level_[number_of_levels_ - 1] = std::max(number_of_features_ - sum_of_features, 0);
+  features_per_level_[number_of_pyramid_levels_ - 1] = std::max(number_of_features_ - sum_of_features, 0);
 
   const int number_of_keypoints(512);
   // TODO: check, if it's converted correctly
@@ -64,7 +64,7 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
 }
 
 void ORBFeatureExtractor::computePyramid(const cv::Mat &image) {
-  for (size_t level = 0; level < number_of_levels_; ++level) {
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
     Precision scale = inv_scale_factor_per_level_[level];
     // TODO: rename
     cv::Size size(cvRound(static_cast<Precision>(image.cols) * scale),
@@ -308,10 +308,10 @@ void ORBFeatureExtractor::computeOrientation(const cv::Mat &image, Keypoints &ke
 }
 
 void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_keypoints) const {
-  all_keypoints.resize(number_of_levels_);
+  all_keypoints.resize(number_of_pyramid_levels_);
   const int window_size(35);
 
-  for (size_t level = 0; level < number_of_levels_; ++level) {
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
     // TODO: think of setting them as class members
     const int min_border_x(edge_threshold_ - 3);
     const int min_border_y(min_border_x);
@@ -379,7 +379,7 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     }
   }
 
-  for (size_t level = 0; level < number_of_levels_; ++level)
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level)
     computeOrientation(image_pyramid_[level], all_keypoints[level], umax_);
 }
 
@@ -397,11 +397,11 @@ void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) {
   computeKeypointsOctTree(all_keypoints);
 
   size_t number_of_keypoints{0};
-  for (size_t level = 0; level < number_of_levels_; ++level) number_of_keypoints += all_keypoints[level].size();
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) number_of_keypoints += all_keypoints[level].size();
 
   keypoints = Keypoints(number_of_keypoints);
 
-  for (size_t level = 0; level < number_of_levels_; ++level) {
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
     Keypoints &keypoints_per_level = all_keypoints[level];
     size_t number_of_keypoints_per_level = keypoints_per_level.size();
     // TODO: check simply is it empty or not

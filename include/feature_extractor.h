@@ -16,7 +16,7 @@ using Keypoints = std::vector<cv::KeyPoint>;
 
 class ORBFeatureExtractor {
  public:
-  explicit ORBFeatureExtractor(const int number_of_features, const size_t number_of_levels,
+  explicit ORBFeatureExtractor(const int number_of_features, const size_t number_of_pyramid_levels,
                                const Precision scale_factor);
 
   void computePyramid(const cv::Mat &image);
@@ -53,7 +53,7 @@ class ORBFeatureExtractor {
 
  private:
   const int number_of_features_;
-  const size_t number_of_levels_;
+  const size_t number_of_pyramid_levels_;
 
   std::vector<Precision> scale_factor_per_level_;
   std::vector<Precision> inv_scale_factor_per_level_;
