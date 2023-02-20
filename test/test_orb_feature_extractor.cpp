@@ -24,6 +24,7 @@ class TestORBFeatureExtractor : public ::testing::Test {
   YAML::Node config_node_;
 };
 
+// TODO: test detector and extractor separately
 TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   auto feature_extractor_config = config_node_["feature_extractor"];
   std::map<std::string, std::string> feature_extractor_parameters;
@@ -51,7 +52,11 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, number_of_pyramid_levels,
                                                                scale_factor);
   orb_feature_extractor::Keypoints keypoints;
-  feature_extractor.extract(image, keypoints);
+  cv::Mat descriptors;
+  feature_extractor.extract(image, keypoints, descriptors);
+
+  EXPECT_NE(keypoints.size(), 0);
+  EXPECT_NE(cv::countNonZero(descriptors), 0);
 
   cv::drawKeypoints(image, keypoints, debug_image, cv::Scalar(0, 255, 0));
   cv::imshow("debug_image", debug_image);

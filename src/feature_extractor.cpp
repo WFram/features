@@ -32,7 +32,8 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
   Precision factor = 1.0 / scale_factor;
   Precision desired_features_per_scale =
       number_of_features_ * (1 - factor) /
-      (1 - static_cast<Precision>(std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
+      (1 - static_cast<Precision>(
+               std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
 
   int sum_of_features{0};
   for (size_t level = 0; level < number_of_pyramid_levels_ - 1; level++) {
@@ -383,7 +384,60 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     computeOrientation(image_pyramid_[level], all_keypoints[level], umax_);
 }
 
-void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) {
+void ORBFeatureExtractor::compute_descriptors(const cv::Mat &image, const Keypoints &keypoints, cv::Mat &descriptors) {
+  descriptors = cv::Mat::zeros(static_cast<int>(keypoints.size()), 32, CV_8U);
+
+  for (size_t i = 0; i < keypoints.size(); i++) {
+    Precision angle = static_cast<Precision>(keypoints[i].angle) * static_cast<Precision>(CV_PI / 180);
+
+    const uchar *center = &image.at<uchar>(cvRound(keypoints[i].pt.y), cvRound(keypoints[i].pt.x));
+    const int image_step = static_cast<int>(image.step);
+
+    auto pattern = &pattern_[0];
+
+    auto get_center_pixel_value = [&](const int &idx) {
+      return center[cvRound(pattern[static_cast<size_t>(idx)].x * std::sin(angle) +
+                            pattern[static_cast<size_t>(idx)].y * std::cos(angle)) *
+                        image_step +
+                    cvRound(pattern[static_cast<size_t>(idx)].x * std::cos(angle) -
+                            pattern[static_cast<size_t>(idx)].y * std::sin(angle))];
+    };
+
+    for (int j = 0; j < 32; ++j, pattern += 16) {
+      int t0, t1, val;
+      t0 = get_center_pixel_value(0);
+      t1 = get_center_pixel_value(1);
+      val = t0 < t1;
+      t0 = get_center_pixel_value(2);
+      t1 = get_center_pixel_value(3);
+      val |= (t0 < t1) << 1;
+      t0 = get_center_pixel_value(4);
+      t1 = get_center_pixel_value(5);
+      val |= (t0 < t1) << 2;
+      t0 = get_center_pixel_value(6);
+      t1 = get_center_pixel_value(7);
+      val |= (t0 < t1) << 3;
+      t0 = get_center_pixel_value(8);
+      t1 = get_center_pixel_value(9);
+      val |= (t0 < t1) << 4;
+      t0 = get_center_pixel_value(10);
+      t1 = get_center_pixel_value(11);
+      val |= (t0 < t1) << 5;
+      t0 = get_center_pixel_value(12);
+      t1 = get_center_pixel_value(13);
+      val |= (t0 < t1) << 6;
+      t0 = get_center_pixel_value(14);
+      t1 = get_center_pixel_value(15);
+      val |= (t0 < t1) << 7;
+
+      // TODO: think of changing static_cast to some alias
+      auto descriptor = descriptors.ptr(static_cast<int>(i));
+      descriptor[j] = static_cast<uchar>(val);
+    }
+  }
+}
+
+void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints, cv::Mat &descriptors) {
   if (image.empty()) {
     std::cerr << "ERROR: empty image!" << std::endl;
     return;
@@ -396,10 +450,23 @@ void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) {
   std::vector<Keypoints> all_keypoints;
   computeKeypointsOctTree(all_keypoints);
 
-  size_t number_of_keypoints{0};
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) number_of_keypoints += all_keypoints[level].size();
+  // TODO: shouldn't it be an alias?
+  cv::Mat temp_descriptors;
 
-  keypoints = Keypoints(number_of_keypoints);
+  size_t number_of_keypoints_in_pyramid{0};
+  for (size_t level = 0; level < number_of_pyramid_levels_; ++level)
+    number_of_keypoints_in_pyramid += all_keypoints[level].size();
+
+  if (number_of_keypoints_in_pyramid == 0)
+    descriptors.release();
+  else {
+    // TODO: figure out what happens (what are the values after we did it)
+    descriptors = cv::Mat::zeros(static_cast<int>(number_of_keypoints_in_pyramid), 32, CV_8U);
+    // TODO: make sure everything is okay here
+    temp_descriptors = descriptors;
+  }
+
+  keypoints = Keypoints(number_of_keypoints_in_pyramid);
 
   for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
     Keypoints &keypoints_per_level = all_keypoints[level];
@@ -407,11 +474,20 @@ void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints) {
     // TODO: check simply is it empty or not
     if (number_of_keypoints_per_level == 0) continue;
 
+    /* Here we should deal with descriptors */
+    auto blurred_image = image_pyramid_[level].clone();
+    cv::GaussianBlur(blurred_image, blurred_image, cv::Size(7, 7), 2, 2, cv::BORDER_REFLECT_101);
+
+    cv::Mat descriptors_per_level = cv::Mat(static_cast<int>(number_of_keypoints_per_level), 32, CV_8U);
+    compute_descriptors(blurred_image, keypoints_per_level, descriptors_per_level);
+
     Precision scale = scale_factor_per_level_[level];
-    for (auto &kp_per_lvl : keypoints_per_level) {
+    for (size_t i = 0; i != keypoints_per_level.size(); ++i) {
       // Scale keypoint coordinates
+      auto kp_per_lvl = keypoints_per_level[i];
       if (level != 0) kp_per_lvl.pt *= scale;
       keypoints.emplace_back(kp_per_lvl);
+      descriptors_per_level.row(static_cast<int>(i)).copyTo(temp_descriptors.row(static_cast<int>(i)));
     }
   }
 }
