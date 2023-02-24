@@ -9,9 +9,10 @@
 
 #include <opencv4/opencv2/opencv.hpp>
 
+#include <utils.h>
+
 namespace orb_feature_extractor {
 
-using Precision = double;
 using Keypoints = std::vector<cv::KeyPoint>;
 
 class ORBFeatureExtractor {
@@ -20,6 +21,10 @@ class ORBFeatureExtractor {
                                const Precision scale_factor);
 
   void computePyramid(const cv::Mat &image);
+
+  // TODO: decide about making the pyramid a unique pointer. Because we don't need to store it inside a class of
+  //  feature extractor
+  /*void getPyramid(std::vector<cv::Mat> &image_pyramid) {  }*/
 
   void distributeOctTree(const Keypoints &distributed_keypoints, Keypoints &result_keypoints, const int &min_x,
                          const int &max_x, const int &min_y, const int &max_y, const size_t &N) const;

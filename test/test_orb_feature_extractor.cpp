@@ -34,7 +34,7 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
 
   int number_of_features{1500};
   size_t number_of_pyramid_levels{8};
-  Precision scale_factor{1.2};
+  Precision scale_factor{1.2f};
 
   auto read_parameter = [&]<typename T>(const std::string &parameter_name, T &parameter) {
     auto str_value = feature_extractor_parameters.at(parameter_name);

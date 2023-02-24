@@ -10,8 +10,8 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
     : number_of_features_(number_of_features), number_of_pyramid_levels_(number_of_pyramid_levels) {
   scale_factor_per_level_.resize(number_of_pyramid_levels_);
   squared_scale_factor_per_level_.resize(number_of_pyramid_levels_);
-  scale_factor_per_level_[0] = 1.0;
-  squared_scale_factor_per_level_[0] = 1.0;
+  scale_factor_per_level_[0] = 1.0f;
+  squared_scale_factor_per_level_[0] = 1.0f;
 
   for (size_t i = 1; i < number_of_pyramid_levels_; i++) {
     scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor;
@@ -22,18 +22,18 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
   squared_inv_scale_factor_per_level_.resize(number_of_pyramid_levels_);
 
   for (size_t i = 0; i < number_of_pyramid_levels_; i++) {
-    inv_scale_factor_per_level_[i] = 1.0 / scale_factor_per_level_[i];
-    squared_inv_scale_factor_per_level_[i] = 1.0 / squared_scale_factor_per_level_[i];
+    inv_scale_factor_per_level_[i] = 1.0f / scale_factor_per_level_[i];
+    squared_inv_scale_factor_per_level_[i] = 1.0f / squared_scale_factor_per_level_[i];
   }
 
   image_pyramid_.resize(number_of_pyramid_levels_);
   features_per_level_.resize(number_of_pyramid_levels_);
 
-  Precision factor = 1.0 / scale_factor;
+  Precision factor = 1.0f / scale_factor;
   Precision desired_features_per_scale =
-      number_of_features_ * (1 - factor) /
-      (1 - static_cast<Precision>(
-               std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
+      static_cast<Precision>(number_of_features_) * (1.0f - factor) /
+      (1.0f - static_cast<Precision>(
+                  std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
 
   int sum_of_features{0};
   for (size_t level = 0; level < number_of_pyramid_levels_ - 1; level++) {
@@ -54,7 +54,8 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
   int v, v0, vmax = cvFloor(static_cast<Precision>(half_patch_size_) * std::sqrt(2.0) / 2 + 1);
   int vmin = cvCeil(static_cast<Precision>(half_patch_size_) * sqrt(2.0) / 2);
   const auto squared_half_patch_size_ = static_cast<Precision>(half_patch_size_ * half_patch_size_);
-  for (v = 0; v <= vmax; ++v) umax_[static_cast<size_t>(v)] = cvRound(std::sqrt(squared_half_patch_size_ - v * v));
+  for (v = 0; v <= vmax; ++v)
+    umax_[static_cast<size_t>(v)] = cvRound(std::sqrt(squared_half_patch_size_ - static_cast<Precision>((v * v))));
 
   // Make sure about symmetry
   for (v = half_patch_size_, v0 = 0; v >= vmin; --v) {
@@ -148,7 +149,7 @@ void ORBFeatureExtractor::distributeOctTree(const Keypoints &distributed_keypoin
   // Compute how many initial nodes are there
   const int init_n = static_cast<int>(std::round((max_x - min_x) / (max_y - min_y)));
   // TODO: rename
-  const Precision h_x = static_cast<Precision>(max_x - min_x) / init_n;
+  const Precision h_x = static_cast<Precision>(max_x - min_x) / static_cast<Precision>(init_n);
 
   std::list<ExtractorNode> nodes;
   std::vector<ExtractorNode *> init_nodes;
@@ -369,7 +370,8 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     distributeOctTree(distributed_keypoints, keypoints, min_border_x, max_border_x, min_border_y, max_border_y,
                       static_cast<size_t>(features_per_level_[level]));
 
-    const int scaled_patch_size = static_cast<int>(patch_size_ * scale_factor_per_level_[level]);
+    const int scaled_patch_size =
+        static_cast<int>(static_cast<Precision>(patch_size_) * scale_factor_per_level_[level]);
 
     // Add border to the coordinates and scale information
     for (auto &kp : keypoints) {
@@ -396,11 +398,11 @@ void ORBFeatureExtractor::compute_descriptors(const cv::Mat &image, const Keypoi
     auto pattern = &pattern_[0];
 
     auto get_center_pixel_value = [&](const int &idx) {
-      return center[cvRound(pattern[static_cast<size_t>(idx)].x * std::sin(angle) +
-                            pattern[static_cast<size_t>(idx)].y * std::cos(angle)) *
+      return center[cvRound(static_cast<Precision>(pattern[static_cast<size_t>(idx)].x) * std::sin(angle) +
+                            static_cast<Precision>(pattern[static_cast<size_t>(idx)].y) * std::cos(angle)) *
                         image_step +
-                    cvRound(pattern[static_cast<size_t>(idx)].x * std::cos(angle) -
-                            pattern[static_cast<size_t>(idx)].y * std::sin(angle))];
+                    cvRound(static_cast<Precision>(pattern[static_cast<size_t>(idx)].x) * std::cos(angle) -
+                            static_cast<Precision>(pattern[static_cast<size_t>(idx)].y) * std::sin(angle))];
     };
 
     for (int j = 0; j < 32; ++j, pattern += 16) {
