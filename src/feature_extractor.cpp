@@ -5,43 +5,8 @@
 #include "feature_extractor.h"
 
 namespace orb_feature_extractor {
-ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, std::unique_ptr<ImagePyramid> image_pyramid,
-                                         const Precision scale_factor)
-    : number_of_features_(number_of_features), image_pyramid_(std::move(image_pyramid)) {
-  scale_factor_per_level_.resize(image_pyramid_->size());
-  squared_scale_factor_per_level_.resize(image_pyramid_->size());
-  scale_factor_per_level_[0] = 1.0f;
-  squared_scale_factor_per_level_[0] = 1.0f;
-
-  for (size_t i = 1; i < image_pyramid_->size(); i++) {
-    scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor;
-    squared_scale_factor_per_level_[i] = scale_factor_per_level_[i] * scale_factor_per_level_[i];
-  }
-
-  inv_scale_factor_per_level_.resize(image_pyramid_->size());
-  squared_inv_scale_factor_per_level_.resize(image_pyramid_->size());
-
-  for (size_t i = 0; i < image_pyramid_->size(); i++) {
-    inv_scale_factor_per_level_[i] = 1.0f / scale_factor_per_level_[i];
-    squared_inv_scale_factor_per_level_[i] = 1.0f / squared_scale_factor_per_level_[i];
-  }
-
-  features_per_level_.resize(image_pyramid_->size());
-
-  Precision factor = 1.0f / scale_factor;
-  Precision desired_features_per_scale =
-      static_cast<Precision>(number_of_features_) * (1.0f - factor) /
-      (1.0f - static_cast<Precision>(
-                  std::pow(static_cast<Precision>(factor), static_cast<Precision>(image_pyramid_->size()))));
-
-  int sum_of_features{0};
-  for (size_t level = 0; level < image_pyramid_->size() - 1; level++) {
-    features_per_level_[level] = cvRound(desired_features_per_scale);
-    sum_of_features += features_per_level_[level];
-    desired_features_per_scale *= factor;
-  }
-  features_per_level_[image_pyramid_->size() - 1] = std::max(number_of_features_ - sum_of_features, 0);
-
+ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const Precision scale_factor)
+    : number_of_features_(number_of_features), scale_factor_(scale_factor) {
   const int number_of_keypoints(512);
   // TODO: check, if it's converted correctly
   // TODO: change an array to std::array
@@ -61,29 +26,6 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, std::uniq
     while (umax_[static_cast<size_t>(v0)] == umax_[static_cast<size_t>(v0 + 1)]) ++v0;
     umax_[static_cast<size_t>(v)] = v0;
     ++v0;
-  }
-}
-
-void ORBFeatureExtractor::computePyramid(const cv::Mat &image) {
-  for (size_t level = 0; level < image_pyramid_->size(); ++level) {
-    Precision scale = inv_scale_factor_per_level_[level];
-    // TODO: rename
-    cv::Size size(cvRound(static_cast<Precision>(image.cols) * scale),
-                  cvRound(static_cast<Precision>(image.rows) * scale));
-    cv::Size whole_size(size.width + edge_threshold_ * 2, size.height + edge_threshold_ * 2);
-    cv::Mat temporal_image(whole_size, image.type());
-    image_pyramid_->at(level) = temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height));
-
-    // Compute the resized image
-    if (level != 0) {
-      cv::resize(image_pyramid_->at(level - 1), image_pyramid_->at(level), size, 0, 0, cv::INTER_LINEAR);
-
-      cv::copyMakeBorder(image_pyramid_->at(level), temporal_image, edge_threshold_, edge_threshold_, edge_threshold_,
-                         edge_threshold_, cv::BORDER_REFLECT_101 + cv::BORDER_ISOLATED);
-    } else {
-      cv::copyMakeBorder(image, temporal_image, edge_threshold_, edge_threshold_, edge_threshold_, edge_threshold_,
-                         cv::BORDER_REFLECT_101);
-    }
   }
 }
 
@@ -438,15 +380,41 @@ void ORBFeatureExtractor::compute_descriptors(const cv::Mat &image, const Keypoi
   }
 }
 
-void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints, cv::Mat &descriptors) {
-  if (image.empty()) {
+void ORBFeatureExtractor::extract(std::unique_ptr<ImagePyramid> image_pyramid, Keypoints &keypoints,
+                                  cv::Mat &descriptors) {
+  if (image_pyramid->at(0).empty()) {
     std::cerr << "ERROR: empty image!" << std::endl;
     return;
   }
 
-  assert(image.type() == CV_8UC1);
+  assert(image_pyramid->at(0).type() == CV_8UC1);
 
-  computePyramid(image);
+  // TODO: use a setter
+  image_pyramid_ = std::move(image_pyramid);
+
+  // TODO: scale vectors should be known in advance, so move them from the image pyramid calculation
+  scale_factor_per_level_.resize(image_pyramid_->size());
+  scale_factor_per_level_[0] = 1.0f;
+
+  for (size_t i = 1; i < image_pyramid_->size(); i++)
+    scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor_;
+
+  // TODO: a separate function
+  features_per_level_.resize(image_pyramid_->size());
+
+  Precision factor = 1.0f / scale_factor_;
+  Precision desired_features_per_scale =
+      static_cast<Precision>(number_of_features_) * (1.0f - factor) /
+      (1.0f - static_cast<Precision>(
+                  std::pow(static_cast<Precision>(factor), static_cast<Precision>(image_pyramid_->size()))));
+
+  int sum_of_features{0};
+  for (size_t level = 0; level < image_pyramid_->size() - 1; level++) {
+    features_per_level_[level] = cvRound(desired_features_per_scale);
+    sum_of_features += features_per_level_[level];
+    desired_features_per_scale *= factor;
+  }
+  features_per_level_[image_pyramid_->size() - 1] = std::max(number_of_features_ - sum_of_features, 0);
 
   std::vector<Keypoints> all_keypoints;
   computeKeypointsOctTree(all_keypoints);

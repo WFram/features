@@ -52,11 +52,10 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
 
   auto image_pyramid = utils::computeImagePyramid(image, number_of_pyramid_levels, scale_factor, edge_threshold);
 
-  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, std::move(image_pyramid),
-                                                               scale_factor);
+  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, scale_factor);
   orb_feature_extractor::Keypoints keypoints;
   cv::Mat descriptors;
-  feature_extractor.extract(image, keypoints, descriptors);
+  feature_extractor.extract(std::move(image_pyramid), keypoints, descriptors);
 
   EXPECT_NE(keypoints.size(), 0);
   EXPECT_NE(cv::countNonZero(descriptors), 0);
