@@ -5,23 +5,23 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(dependencies.cmake)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 11.0)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 11.0)
         # wouldn't build on g++-12 without this
         set(CMAKE_CXX_FLAGS
                 "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized -Wno-uninitialized -Wno-restrict -Wno-array-bounds -Wno-strict-overflow -Wno-aggressive-loop-optimizations"
                 )
-    else()
+    else ()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wstrict-overflow=2")
-    endif()
-endif()
+    endif ()
+endif ()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -pthread")
 set(CMAKE_CXX_FLAGS
         "${CMAKE_CXX_FLAGS} -Werror -Wall -Wextra -Wpedantic -Wconversion -fdiagnostics-color=always"
         )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS
             "${CMAKE_CXX_FLAGS} -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization"
             )
@@ -39,10 +39,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=2")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
-endif()
+endif ()
 
 add_library(feature_extractor
-            src/feature_extractor.cpp)
+        src/feature_extractor.cpp
+        src/utils.cpp)
 
 target_include_directories(feature_extractor PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")

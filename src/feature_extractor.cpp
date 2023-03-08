@@ -5,43 +5,42 @@
 #include "feature_extractor.h"
 
 namespace orb_feature_extractor {
-ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const size_t number_of_pyramid_levels,
+ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, std::unique_ptr<ImagePyramid> image_pyramid,
                                          const Precision scale_factor)
-    : number_of_features_(number_of_features), number_of_pyramid_levels_(number_of_pyramid_levels) {
-  scale_factor_per_level_.resize(number_of_pyramid_levels_);
-  squared_scale_factor_per_level_.resize(number_of_pyramid_levels_);
+    : number_of_features_(number_of_features), image_pyramid_(std::move(image_pyramid)) {
+  scale_factor_per_level_.resize(image_pyramid_->size());
+  squared_scale_factor_per_level_.resize(image_pyramid_->size());
   scale_factor_per_level_[0] = 1.0f;
   squared_scale_factor_per_level_[0] = 1.0f;
 
-  for (size_t i = 1; i < number_of_pyramid_levels_; i++) {
+  for (size_t i = 1; i < image_pyramid_->size(); i++) {
     scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor;
     squared_scale_factor_per_level_[i] = scale_factor_per_level_[i] * scale_factor_per_level_[i];
   }
 
-  inv_scale_factor_per_level_.resize(number_of_pyramid_levels_);
-  squared_inv_scale_factor_per_level_.resize(number_of_pyramid_levels_);
+  inv_scale_factor_per_level_.resize(image_pyramid_->size());
+  squared_inv_scale_factor_per_level_.resize(image_pyramid_->size());
 
-  for (size_t i = 0; i < number_of_pyramid_levels_; i++) {
+  for (size_t i = 0; i < image_pyramid_->size(); i++) {
     inv_scale_factor_per_level_[i] = 1.0f / scale_factor_per_level_[i];
     squared_inv_scale_factor_per_level_[i] = 1.0f / squared_scale_factor_per_level_[i];
   }
 
-  image_pyramid_.resize(number_of_pyramid_levels_);
-  features_per_level_.resize(number_of_pyramid_levels_);
+  features_per_level_.resize(image_pyramid_->size());
 
   Precision factor = 1.0f / scale_factor;
   Precision desired_features_per_scale =
       static_cast<Precision>(number_of_features_) * (1.0f - factor) /
       (1.0f - static_cast<Precision>(
-                  std::pow(static_cast<Precision>(factor), static_cast<Precision>(number_of_pyramid_levels_))));
+                  std::pow(static_cast<Precision>(factor), static_cast<Precision>(image_pyramid_->size()))));
 
   int sum_of_features{0};
-  for (size_t level = 0; level < number_of_pyramid_levels_ - 1; level++) {
+  for (size_t level = 0; level < image_pyramid_->size() - 1; level++) {
     features_per_level_[level] = cvRound(desired_features_per_scale);
     sum_of_features += features_per_level_[level];
     desired_features_per_scale *= factor;
   }
-  features_per_level_[number_of_pyramid_levels_ - 1] = std::max(number_of_features_ - sum_of_features, 0);
+  features_per_level_[image_pyramid_->size() - 1] = std::max(number_of_features_ - sum_of_features, 0);
 
   const int number_of_keypoints(512);
   // TODO: check, if it's converted correctly
@@ -66,20 +65,20 @@ ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const siz
 }
 
 void ORBFeatureExtractor::computePyramid(const cv::Mat &image) {
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
+  for (size_t level = 0; level < image_pyramid_->size(); ++level) {
     Precision scale = inv_scale_factor_per_level_[level];
     // TODO: rename
     cv::Size size(cvRound(static_cast<Precision>(image.cols) * scale),
                   cvRound(static_cast<Precision>(image.rows) * scale));
     cv::Size whole_size(size.width + edge_threshold_ * 2, size.height + edge_threshold_ * 2);
     cv::Mat temporal_image(whole_size, image.type());
-    image_pyramid_[level] = temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height));
+    image_pyramid_->at(level) = temporal_image(cv::Rect(edge_threshold_, edge_threshold_, size.width, size.height));
 
     // Compute the resized image
     if (level != 0) {
-      cv::resize(image_pyramid_[level - 1], image_pyramid_[level], size, 0, 0, cv::INTER_LINEAR);
+      cv::resize(image_pyramid_->at(level - 1), image_pyramid_->at(level), size, 0, 0, cv::INTER_LINEAR);
 
-      cv::copyMakeBorder(image_pyramid_[level], temporal_image, edge_threshold_, edge_threshold_, edge_threshold_,
+      cv::copyMakeBorder(image_pyramid_->at(level), temporal_image, edge_threshold_, edge_threshold_, edge_threshold_,
                          edge_threshold_, cv::BORDER_REFLECT_101 + cv::BORDER_ISOLATED);
     } else {
       cv::copyMakeBorder(image, temporal_image, edge_threshold_, edge_threshold_, edge_threshold_, edge_threshold_,
@@ -310,15 +309,15 @@ void ORBFeatureExtractor::computeOrientation(const cv::Mat &image, Keypoints &ke
 }
 
 void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_keypoints) const {
-  all_keypoints.resize(number_of_pyramid_levels_);
+  all_keypoints.resize(image_pyramid_->size());
   const int window_size(35);
 
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
+  for (size_t level = 0; level < image_pyramid_->size(); ++level) {
     // TODO: think of setting them as class members
     const int min_border_x(edge_threshold_ - 3);
     const int min_border_y(min_border_x);
-    const int max_border_x(image_pyramid_[level].cols - edge_threshold_ + 3);
-    const int max_border_y(image_pyramid_[level].rows - edge_threshold_ + 3);
+    const int max_border_x(image_pyramid_->at(level).cols - edge_threshold_ + 3);
+    const int max_border_y(image_pyramid_->at(level).rows - edge_threshold_ + 3);
 
     Keypoints distributed_keypoints;
     distributed_keypoints.reserve(static_cast<size_t>(number_of_features_ * 10));
@@ -346,11 +345,11 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
 
         Keypoints cell_keypoints;
         // TODO: change to flexible version
-        cv::FAST(image_pyramid_[level].rowRange(init_y, max_y).colRange(init_x, max_x), cell_keypoints,
+        cv::FAST(image_pyramid_->at(level).rowRange(init_y, max_y).colRange(init_x, max_x), cell_keypoints,
                  init_fast_threshold_, true);
 
         if (cell_keypoints.empty())
-          cv::FAST(image_pyramid_[level].rowRange(init_y, max_y).colRange(init_x, max_x), cell_keypoints,
+          cv::FAST(image_pyramid_->at(level).rowRange(init_y, max_y).colRange(init_x, max_x), cell_keypoints,
                    min_fast_threshold_, true);
 
         // TODO: check if we don't lose the precision when casting
@@ -382,8 +381,8 @@ void ORBFeatureExtractor::computeKeypointsOctTree(std::vector<Keypoints> &all_ke
     }
   }
 
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level)
-    computeOrientation(image_pyramid_[level], all_keypoints[level], umax_);
+  for (size_t level = 0; level < image_pyramid_->size(); ++level)
+    computeOrientation(image_pyramid_->at(level), all_keypoints[level], umax_);
 }
 
 void ORBFeatureExtractor::compute_descriptors(const cv::Mat &image, const Keypoints &keypoints, cv::Mat &descriptors) {
@@ -456,7 +455,7 @@ void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints, cv
   cv::Mat temp_descriptors;
 
   size_t number_of_keypoints_in_pyramid{0};
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level)
+  for (size_t level = 0; level < image_pyramid_->size(); ++level)
     number_of_keypoints_in_pyramid += all_keypoints[level].size();
 
   if (number_of_keypoints_in_pyramid == 0)
@@ -470,14 +469,14 @@ void ORBFeatureExtractor::extract(const cv::Mat &image, Keypoints &keypoints, cv
 
   keypoints = Keypoints(number_of_keypoints_in_pyramid);
 
-  for (size_t level = 0; level < number_of_pyramid_levels_; ++level) {
+  for (size_t level = 0; level < image_pyramid_->size(); ++level) {
     Keypoints &keypoints_per_level = all_keypoints[level];
     size_t number_of_keypoints_per_level = keypoints_per_level.size();
     // TODO: check simply is it empty or not
     if (number_of_keypoints_per_level == 0) continue;
 
     /* Here we should deal with descriptors */
-    auto blurred_image = image_pyramid_[level].clone();
+    auto blurred_image = image_pyramid_->at(level).clone();
     cv::GaussianBlur(blurred_image, blurred_image, cv::Size(7, 7), 2, 2, cv::BORDER_REFLECT_101);
 
     cv::Mat descriptors_per_level = cv::Mat(static_cast<int>(number_of_keypoints_per_level), 32, CV_8U);

@@ -7,8 +7,6 @@
 
 #include <list>
 
-#include <opencv4/opencv2/opencv.hpp>
-
 #include <utils.h>
 
 namespace orb_feature_extractor {
@@ -17,7 +15,7 @@ using Keypoints = std::vector<cv::KeyPoint>;
 
 class ORBFeatureExtractor {
  public:
-  explicit ORBFeatureExtractor(const int number_of_features, const size_t number_of_pyramid_levels,
+  explicit ORBFeatureExtractor(const int number_of_features, const std::unique_ptr<ImagePyramid> image_pyramid,
                                const Precision scale_factor);
 
   void computePyramid(const cv::Mat &image);
@@ -62,14 +60,13 @@ class ORBFeatureExtractor {
 
  private:
   const int number_of_features_;
-  const size_t number_of_pyramid_levels_;
 
   std::vector<Precision> scale_factor_per_level_;
   std::vector<Precision> inv_scale_factor_per_level_;
   std::vector<Precision> squared_scale_factor_per_level_;
   std::vector<Precision> squared_inv_scale_factor_per_level_;
 
-  std::vector<cv::Mat> image_pyramid_;
+  std::unique_ptr<ImagePyramid> image_pyramid_;
   std::vector<int> features_per_level_;
 
   std::vector<cv::Point> pattern_;

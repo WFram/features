@@ -35,6 +35,7 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   int number_of_features{1500};
   size_t number_of_pyramid_levels{8};
   Precision scale_factor{1.2f};
+  int edge_threshold{19};
 
   auto read_parameter = [&]<typename T>(const std::string &parameter_name, T &parameter) {
     auto str_value = feature_extractor_parameters.at(parameter_name);
@@ -49,7 +50,9 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   cv::Mat image = cv::imread(test_file_, cv::IMREAD_GRAYSCALE);
   cv::Mat debug_image;
 
-  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, number_of_pyramid_levels,
+  auto image_pyramid = utils::computeImagePyramid(image, number_of_pyramid_levels, scale_factor, edge_threshold);
+
+  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, std::move(image_pyramid),
                                                                scale_factor);
   orb_feature_extractor::Keypoints keypoints;
   cv::Mat descriptors;
