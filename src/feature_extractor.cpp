@@ -5,8 +5,10 @@
 #include "feature_extractor.h"
 
 namespace orb_feature_extractor {
-ORBFeatureExtractor::ORBFeatureExtractor(const int number_of_features, const Precision scale_factor)
-    : number_of_features_(number_of_features), scale_factor_(scale_factor) {
+ORBFeatureExtractor::ORBFeatureExtractor(const int &number_of_features, const std::vector<Precision> &upscale_vector)
+    : number_of_features_(number_of_features),
+      scale_factor_(upscale_vector[1]),
+      scale_factor_per_level_(upscale_vector) {
   const int number_of_keypoints(512);
   // TODO: check, if it's converted correctly
   // TODO: change an array to std::array
@@ -391,13 +393,6 @@ void ORBFeatureExtractor::extract(std::unique_ptr<ImagePyramid> image_pyramid, K
 
   // TODO: use a setter
   image_pyramid_ = std::move(image_pyramid);
-
-  // TODO: scale vectors should be known in advance, so move them from the image pyramid calculation
-  scale_factor_per_level_.resize(image_pyramid_->size());
-  scale_factor_per_level_[0] = 1.0f;
-
-  for (size_t i = 1; i < image_pyramid_->size(); i++)
-    scale_factor_per_level_[i] = scale_factor_per_level_[i - 1] * scale_factor_;
 
   // TODO: a separate function
   features_per_level_.resize(image_pyramid_->size());

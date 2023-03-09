@@ -16,10 +16,10 @@ using ImagePyramid = std::vector<cv::Mat>;
 namespace utils {
 
 // TODO: add
-void computeScaleVectors();
+std::vector<Precision> computeUpScaleVector(const size_t &number_of_pyramid_levels, const Precision &scale_factor);
 
-std::unique_ptr<ImagePyramid> computeImagePyramid(const cv::Mat &image, const size_t &number_of_pyramid_levels,
-                                                  const Precision &scale_factor, const int &edge_threshold);
+std::unique_ptr<ImagePyramid> computeImagePyramid(const cv::Mat &image, const std::vector<Precision> &upscale_vector,
+                                                  const int &edge_threshold);
 
 }  // namespace utils
 

@@ -50,9 +50,10 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   cv::Mat image = cv::imread(test_file_, cv::IMREAD_GRAYSCALE);
   cv::Mat debug_image;
 
-  auto image_pyramid = utils::computeImagePyramid(image, number_of_pyramid_levels, scale_factor, edge_threshold);
+  const auto& upscale_vector = utils::computeUpScaleVector(number_of_pyramid_levels, scale_factor);
+  auto image_pyramid = utils::computeImagePyramid(image, upscale_vector, edge_threshold);
 
-  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, scale_factor);
+  orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, upscale_vector);
   orb_feature_extractor::Keypoints keypoints;
   cv::Mat descriptors;
   feature_extractor.extract(std::move(image_pyramid), keypoints, descriptors);

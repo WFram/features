@@ -15,7 +15,7 @@ using Keypoints = std::vector<cv::KeyPoint>;
 
 class ORBFeatureExtractor {
  public:
-  explicit ORBFeatureExtractor(const int number_of_features, const Precision scale_factor);
+  explicit ORBFeatureExtractor(const int &number_of_features, const std::vector<Precision> &upscale_vector);
 
   // TODO: decide about making the pyramid a unique pointer. Because we don't need to store it inside a class of
   //  feature extractor
@@ -60,9 +60,6 @@ class ORBFeatureExtractor {
   const Precision scale_factor_;
 
   std::vector<Precision> scale_factor_per_level_;
-  std::vector<Precision> inv_scale_factor_per_level_;
-  std::vector<Precision> squared_scale_factor_per_level_;
-  std::vector<Precision> squared_inv_scale_factor_per_level_;
 
   std::unique_ptr<ImagePyramid> image_pyramid_;
   std::vector<int> features_per_level_;

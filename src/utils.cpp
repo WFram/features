@@ -4,23 +4,30 @@
 
 #include <utils.h>
 
-std::unique_ptr<ImagePyramid> utils::computeImagePyramid(const cv::Mat &image, const size_t &number_of_pyramid_levels,
-                                                         const Precision &scale_factor, const int &edge_threshold) {
-  ImagePyramid image_pyramid(number_of_pyramid_levels);
-
+// TODO: do we need the pointer or use const ref??
+std::vector<Precision> utils::computeUpScaleVector(const size_t &number_of_pyramid_levels,
+                                                   const Precision &scale_factor) {
   std::vector<Precision> upscale_factor_per_level(number_of_pyramid_levels);
-  std::vector<Precision> downscale_factor_per_level(number_of_pyramid_levels);
-
   upscale_factor_per_level[0] = 1.0_p;
+
+  for (size_t level = 1; level < number_of_pyramid_levels; level++)
+    upscale_factor_per_level[level] = upscale_factor_per_level[level - 1] * scale_factor;
+
+  return upscale_factor_per_level;
+}
+
+std::unique_ptr<ImagePyramid> utils::computeImagePyramid(const cv::Mat &image,
+                                                         const std::vector<Precision> &upscale_vector,
+                                                         const int &edge_threshold) {
+  ImagePyramid image_pyramid(upscale_vector.size());
+  std::vector<Precision> downscale_factor_per_level(upscale_vector.size());
   downscale_factor_per_level[0] = 1.0_p;
 
   // TODO: write scale vectors creation
-  for (size_t level = 1; level < number_of_pyramid_levels; level++) {
-    upscale_factor_per_level[level] = upscale_factor_per_level[level - 1] * scale_factor;
-    downscale_factor_per_level[level] = 1.0_p / upscale_factor_per_level[level];
-  }
+  for (size_t level = 1; level < upscale_vector.size(); level++)
+    downscale_factor_per_level[level] = 1.0_p / upscale_vector[level];
 
-  for (size_t level = 0; level < number_of_pyramid_levels; ++level) {
+  for (size_t level = 0; level < upscale_vector.size(); ++level) {
     Precision scale = downscale_factor_per_level[level];
     // TODO: rename
     cv::Size size(cvRound(static_cast<Precision>(image.cols) * scale),
