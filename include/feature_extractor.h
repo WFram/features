@@ -49,7 +49,7 @@ class ORBFeatureExtractor {
     bool no_more_;
   };
 
-  void extract(std::unique_ptr<ImagePyramid> image_pyramid, Keypoints &keypoints, cv::Mat &descriptors);
+  void extract(const ImagePyramid &image_pyramid, Keypoints &keypoints, cv::Mat &descriptors);
 
   /* This function should take an image from a given pyramid level. Blur it. Take all the keypoints from the current
    * level, descriptor vector to fill, pattern */
@@ -59,9 +59,9 @@ class ORBFeatureExtractor {
   const int number_of_features_;
   const Precision scale_factor_;
 
-  std::vector<Precision> scale_factor_per_level_;
+  std::vector<Precision> upscale_vector_;
 
-  std::unique_ptr<ImagePyramid> image_pyramid_;
+  ImagePyramid image_pyramid_;
   std::vector<int> features_per_level_;
 
   std::vector<cv::Point> pattern_;

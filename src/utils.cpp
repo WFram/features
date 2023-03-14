@@ -16,7 +16,7 @@ std::vector<Precision> utils::computeUpScaleVector(const size_t &number_of_pyram
   return upscale_factor_per_level;
 }
 
-std::unique_ptr<ImagePyramid> utils::computeImagePyramid(const cv::Mat &image,
+ImagePyramid utils::computeImagePyramid(const cv::Mat &image,
                                                          const std::vector<Precision> &upscale_vector,
                                                          const int &edge_threshold) {
   ImagePyramid image_pyramid(upscale_vector.size());
@@ -48,5 +48,5 @@ std::unique_ptr<ImagePyramid> utils::computeImagePyramid(const cv::Mat &image,
     }
   }
 
-  return std::make_unique<ImagePyramid>(image_pyramid);
+  return image_pyramid;
 }

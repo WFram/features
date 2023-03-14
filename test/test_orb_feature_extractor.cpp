@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include <yaml-cpp/yaml.h>
+#include <fstream>
 
 #include "feature_extractor.h"
 
@@ -51,12 +52,19 @@ TEST_F(TestORBFeatureExtractor, testORBFeatureExtractor) {
   cv::Mat debug_image;
 
   const auto& upscale_vector = utils::computeUpScaleVector(number_of_pyramid_levels, scale_factor);
-  auto image_pyramid = utils::computeImagePyramid(image, upscale_vector, edge_threshold);
+  const auto& image_pyramid = utils::computeImagePyramid(image, upscale_vector, edge_threshold);
 
   orb_feature_extractor::ORBFeatureExtractor feature_extractor(number_of_features, upscale_vector);
   orb_feature_extractor::Keypoints keypoints;
   cv::Mat descriptors;
-  feature_extractor.extract(std::move(image_pyramid), keypoints, descriptors);
+  feature_extractor.extract(image_pyramid, keypoints, descriptors);
+
+  std::cout << "Size of keypoint vector: " << keypoints.size() << "\n";
+  std::ofstream debug_log("log.txt", std::ios::trunc);
+  for (auto &kp : keypoints) {
+    auto projection = kp.pt;
+    debug_log << projection << "\n";
+  }
 
   EXPECT_NE(keypoints.size(), 0);
   EXPECT_NE(cv::countNonZero(descriptors), 0);
