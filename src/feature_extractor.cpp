@@ -447,7 +447,7 @@ void ORBFeatureExtractor::extract(const ImagePyramid &image_pyramid, Keypoints &
       // Scale keypoint coordinates
       auto kp_per_lvl = keypoints_per_level[i];
       if (level != 0) kp_per_lvl.pt *= scale;
-      keypoints.emplace_back(kp_per_lvl);
+      keypoints.at(i) = kp_per_lvl;
       descriptors_per_level.row(static_cast<int>(i)).copyTo(temp_descriptors.row(static_cast<int>(i)));
     }
   }
