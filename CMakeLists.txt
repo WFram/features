@@ -43,6 +43,7 @@ endif ()
 
 add_library(feature_extractor
         src/feature_extractor.cpp
+        src/feature_matcher.cpp
         src/utils.cpp)
 
 target_include_directories(feature_extractor PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
