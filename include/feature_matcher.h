@@ -28,16 +28,15 @@ class BFFeaturematcher : public FeatureMatcher {
  public:
   using ImagePyramid = std::vector<cv::Mat>;
 
-  BFFeaturematcher(const ImagePyramid &image_pyramid_1, const ImagePyramid &image_pyramid_2,
-                   const std::vector<Precision> &scale_factor_per_level,
-                   const std::vector<Precision> &inv_scale_factor_per_level, const int &high_threshold,
-                   const int &low_threshold)
-      : imagePyramid1_(image_pyramid_1),
-        imagePyramid2_(image_pyramid_2),
-        scale_factor_per_level_(scale_factor_per_level),
-        inv_scale_factor_per_level_(inv_scale_factor_per_level),
+  BFFeaturematcher(const ImagePyramid &image_pyramid_from, const ImagePyramid &image_pyramid_to,
+                   const std::vector<Precision> &scale_factor_per_level, const int &high_threshold,
+                   const int &low_threshold, const Precision &lowe_ratio)
+      : image_pyramid_from_(image_pyramid_from),
+        image_pyramid_to_(image_pyramid_to),
+        upscale_vector_(scale_factor_per_level),
         high_threshold_(high_threshold),
-        low_threshold_(low_threshold) {}
+        low_threshold_(low_threshold),
+        lowe_ratio_(lowe_ratio) {}
 
   int descriptorDistance(const cv::Mat &descriptor1, const cv::Mat &descriptor2);
 
@@ -46,12 +45,12 @@ class BFFeaturematcher : public FeatureMatcher {
              FeatureCorrespondences &correspondences) override;
 
  protected:
-  const ImagePyramid &imagePyramid1_;
-  const ImagePyramid &imagePyramid2_;
-  const std::vector<Precision> &scale_factor_per_level_;
-  const std::vector<Precision> &inv_scale_factor_per_level_;
+  const ImagePyramid &image_pyramid_from_;
+  const ImagePyramid &image_pyramid_to_;
+  const std::vector<Precision> &upscale_vector_;
   const int high_threshold_;
   const int low_threshold_;
+  const Precision lowe_ratio_;
 };
 
 }  // namespace feature_matcher
